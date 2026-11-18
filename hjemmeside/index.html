@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gættespil</title>
+
+  <!-- ===================== CSS: hvordan siden SER UD ===================== -->
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      color: #222;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+      margin: 0;
+      min-height: 100vh;
+      box-sizing: border-box;
+
+      /* Baggrund: et lille billede (SVG) med tre trekanter, som gentages over hele siden.
+         Den røde peger nedad, og de to blå halvdele udfylder hullerne, så de skiftes. */
+      background-color: #1d3f8f;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='52'%3E%3Cpolygon points='0,0 60,0 30,52' fill='%23d62839'/%3E%3Cpolygon points='0,0 30,52 0,52' fill='%231d3f8f'/%3E%3Cpolygon points='60,0 60,52 30,52' fill='%231d3f8f'/%3E%3C/svg%3E");
+      background-size: 60px 52px;
+    }
+
+    .kort {
+      background: white;
+      max-width: 420px;
+      width: 100%;
+      height: fit-content;
+      padding: 28px;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+      text-align: center;
+    }
+
+    h1 { margin-top: 0; }
+
+    input {
+      font-size: 1.4rem;
+      width: 140px;
+      padding: 8px;
+      text-align: center;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+    }
+
+    button {
+      font-size: 1.1rem;
+      padding: 10px 20px;
+      margin: 6px;
+      border: none;
+      border-radius: 8px;
+      background: #2f6fde;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover { background: #1f57b8; }
+    button:disabled { background: #aaa; cursor: default; }
+
+    /* Knapperne til sværhedsgrad: grå, og blå når de er valgt */
+    .niveau-knap {
+      font-size: 0.95rem;
+      padding: 8px 14px;
+      margin: 3px;
+      background: #e6e6e6;
+      color: #333;
+    }
+    .niveau-knap:hover { background: #d4d4d4; }
+    .niveau-knap.valgt { background: #2f6fde; color: white; }
+
+    #besked {
+      font-size: 1.2rem;
+      font-weight: bold;
+      min-height: 1.5em;
+      margin: 18px 0;
+    }
+
+    .lav    { color: #d97a00; }
+    .høj    { color: #c0392b; }
+    .vundet { color: #1e8a3a; }
+
+    #tidligere-gæt { color: #777; }
+
+    /* Tommel op: stor, og "popper" frem med en lille animation */
+    #tommel {
+      font-size: 7rem;
+      line-height: 1;
+      animation: pop 0.6s ease-out;
+    }
+
+    @keyframes pop {
+      0%   { transform: scale(0) rotate(-30deg); }
+      70%  { transform: scale(1.25) rotate(10deg); }
+      100% { transform: scale(1) rotate(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===================== HTML: hvad der er PÅ siden ===================== -->
+  <div class="kort">
+    <h1>🎯 Gættespil</h1>
+
+    <p>Vælg sværhedsgrad:</p>
+    <div id="niveauer">
+      <button class="niveau-knap" data-maks="50" data-forsøg="7">Let (1–50)</button>
+      <button class="niveau-knap" data-maks="1000" data-forsøg="10">Mellem (1–1000)</button>
+      <button class="niveau-knap" data-maks="10000" data-forsøg="14">Svær (1–10000)</button>
+    </div>
+
+    <p id="intro"></p>
+    <p id="rekord-tekst"></p>
+
+    <input id="gæt-felt" type="number" placeholder="Dit gæt">
+    <br>
+    <button id="gæt-knap">Gæt!</button>
+    <button id="igen-knap" hidden>Spil igen</button>
+
+    <div id="tommel" hidden>👍🏼</div>
+    <p id="besked"></p>
+    <p id="tidligere-gæt"></p>
+  </div>
+
+  <!-- ===================== JavaScript: hvad siden GØR ===================== -->
+  <script>
+    let MAKS_TAL = 1000;    // Det højeste tal, computeren kan vælge (ændres af sværhedsgraden)
+    let MAKS_FORSØG = 10;   // Så mange gæt har spilleren (ændres af sværhedsgraden)
+
+    // Find elementerne på siden, så vi kan ændre dem
+    const gætFelt = document.getElementById("gæt-felt");
+    const gætKnap = document.getElementById("gæt-knap");
+    const igenKnap = document.getElementById("igen-knap");
+    const besked = document.getElementById("besked");
+    const tidligereGæt = document.getElementById("tidligere-gæt");
+    const rekordTekst = document.getElementById("rekord-tekst");
+    const tommel = document.getElementById("tommel");
+    const niveauKnapper = document.querySelectorAll(".niveau-knap");
+
+    let hemmeligtTal;
+    let antalForsøg;
+    let gætListe;
+
+    // I Python gemte vi rekorden i rekord.txt.
+    // En hjemmeside må ikke skrive filer, så her gemmer vi i browserens hukommelse (localStorage).
+    // Hver sværhedsgrad har sin egen rekord, fx "rekord-100".
+    // try/catch: hvis browseren har slået hukommelsen fra, virker spillet stadig (bare uden rekord).
+    function hentRekord() {
+      try {
+        const indhold = localStorage.getItem("rekord-" + MAKS_TAL);
+        return indhold === null ? null : Number(indhold);
+      } catch {
+        return null;
+      }
+    }
+
+    function gemRekord(forsøg) {
+      try {
+        localStorage.setItem("rekord-" + MAKS_TAL, forsøg);
+      } catch {}
+    }
+
+    function visRekord() {
+      const rekord = hentRekord();
+      if (rekord === null) {
+        rekordTekst.textContent = "Der er ingen rekord endnu. Bliv den første!";
+      } else {
+        rekordTekst.textContent = `🏆 Rekord: ${rekord} forsøg`;
+      }
+    }
+
+    // Kører, når spilleren klikker på en sværhedsgrad
+    function vælgNiveau(knap) {
+      MAKS_TAL = Number(knap.dataset.maks);
+      MAKS_FORSØG = Number(knap.dataset.forsøg);
+
+      // Gør den valgte knap blå og de andre grå
+      niveauKnapper.forEach((k) => k.classList.remove("valgt"));
+      knap.classList.add("valgt");
+
+      nytSpil();
+    }
+
+    function nytSpil() {
+      // Math.random() er JavaScripts version af random.randint()
+      hemmeligtTal = Math.floor(Math.random() * MAKS_TAL) + 1;
+      antalForsøg = 0;
+      gætListe = [];
+
+      document.getElementById("intro").textContent =
+        `Jeg tænker på et tal mellem 1 og ${MAKS_TAL}. Du har ${MAKS_FORSØG} forsøg.`;
+      besked.textContent = "";
+      besked.className = "";
+      tidligereGæt.textContent = "";
+      tommel.hidden = true;
+      gætFelt.value = "";
+      gætFelt.disabled = false;
+      gætKnap.disabled = false;
+      igenKnap.hidden = true;
+      gætFelt.focus();
+      visRekord();
+    }
+
+    function slutSpil() {
+      gætFelt.disabled = true;
+      gætKnap.disabled = true;
+      igenKnap.hidden = false;
+      igenKnap.focus();
+    }
+
+    // Denne funktion kører hver gang spilleren gætter.
+    // I Python var det inde i en while-løkke; på en hjemmeside venter vi i stedet på et klik.
+    function gæt() {
+      const gæt = Number(gætFelt.value);
+
+      // Tjek at der faktisk er skrevet et helt tal
+      if (!Number.isInteger(gæt) || gæt < 1 || gætFelt.value === "") {
+        besked.textContent = "Skriv venligst et helt tal.";
+        besked.className = "";
+        return;
+      }
+
+      antalForsøg += 1;
+      const tilbage = MAKS_FORSØG - antalForsøg;
+      gætListe.push(gæt);
+      tidligereGæt.textContent = "Dine gæt: " + gætListe.join(", ");
+      gætFelt.value = "";
+      gætFelt.focus();
+
+      if (gæt === hemmeligtTal) {
+        besked.textContent = `Rigtigt! Tallet var ${hemmeligtTal}. Du brugte ${antalForsøg} forsøg.`;
+        besked.className = "vundet";
+        tommel.hidden = false;   // Vis tommel op
+
+        // Ny rekord, hvis man vandt med færre forsøg end før
+        const rekord = hentRekord();
+        if (rekord === null || antalForsøg < rekord) {
+          gemRekord(antalForsøg);
+          besked.textContent += " 🎉 NY REKORD!";
+          visRekord();
+        }
+        slutSpil();
+      } else if (tilbage === 0) {
+        besked.textContent = `Du tabte! Tallet var ${hemmeligtTal}.`;
+        besked.className = "høj";
+        slutSpil();
+      } else if (gæt < hemmeligtTal) {
+        besked.textContent = `For lavt! (${tilbage} forsøg tilbage)`;
+        besked.className = "lav";
+      } else {
+        besked.textContent = `For højt! (${tilbage} forsøg tilbage)`;
+        besked.className = "høj";
+      }
+    }
+
+    // Sæt knapperne til at kalde vores funktioner
+    gætKnap.addEventListener("click", gæt);
+    igenKnap.addEventListener("click", nytSpil);
+    niveauKnapper.forEach((knap) => {
+      knap.addEventListener("click", () => vælgNiveau(knap));
+    });
+
+    // Lad Enter-tasten virke som et klik på "Gæt!"
+    gætFelt.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") gæt();
+    });
+
+    // ---- Her starter programmet: med sværhedsgrad "Mellem" valgt ----
+    vælgNiveau(niveauKnapper[1]);
+  </script>
+</body>
+</html>
