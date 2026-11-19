@@ -20,6 +20,21 @@
       border-radius: 16px;
       text-align: center;
     }
+    input {
+      font-size: 18px;
+      padding: 8px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      font-size: 18px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #2f6fde;
+      color: white;
+      cursor: pointer;
+    }
     #temperatur {
       font-size: 64px;
       margin: 10px 0;
@@ -29,24 +44,52 @@
 <body>
 
   <div class="kort">
-    <h1>☀️ Vejret i København</h1>
-    <p id="temperatur">Henter...</p>
+    <h1>🌦️ Vejret</h1>
+    <input id="by" placeholder="Skriv en by..." value="København">
+    <button onclick="hentVejr()">Søg</button>
+    <h2 id="bynavn"></h2>
+    <p id="temperatur"></p>
+    <p id="vind"></p>
   </div>
 
   <script>
-    // 1. Bestillingen: adressen til vejr-API'en (samme som du åbnede i browseren)
-    const adresse = "https://api.open-meteo.com/v1/forecast?latitude=55.68&longitude=12.57&current=temperature_2m";
+    // Denne "funktion" kører, når man trykker på Søg-knappen
+    function hentVejr() {
+      const by = document.getElementById("by").value;
 
-    // 2. Send bestillingen af sted og vent på svaret
-    fetch(adresse)
-      .then(svar => svar.json())       // 3. Lav svaret om til JSON
-      .then(data => {
-        // 4. Find temperaturen i JSON-dataene
-        const grader = data.current.temperature_2m;
+      // BESTILLING 1: Find byens placering på landkortet
+      const byAdresse = "https://geocoding-api.open-meteo.com/v1/search?count=1&language=da&name=" + by;
 
-        // 5. Vis den på siden
-        document.getElementById("temperatur").textContent = grader + " °C";
-      });
+      fetch(byAdresse)
+        .then(svar => svar.json())
+        .then(data => {
+          // Hvis API'en ikke kender byen, siger vi det
+          if (!data.results) {
+            document.getElementById("bynavn").textContent = "Kunne ikke finde " + by + " 🤷";
+            document.getElementById("temperatur").textContent = "";
+            document.getElementById("vind").textContent = "";
+            return;
+          }
+
+          const sted = data.results[0];
+          document.getElementById("bynavn").textContent = sted.name + ", " + sted.country;
+
+          // BESTILLING 2: Hent vejret det sted
+          const vejrAdresse = "https://api.open-meteo.com/v1/forecast?current=temperature_2m,wind_speed_10m&wind_speed_unit=ms"
+            + "&latitude=" + sted.latitude
+            + "&longitude=" + sted.longitude;
+
+          return fetch(vejrAdresse)
+            .then(svar => svar.json())
+            .then(vejr => {
+              document.getElementById("temperatur").textContent = vejr.current.temperature_2m + " °C";
+              document.getElementById("vind").textContent = "💨 Vind: " + vejr.current.wind_speed_10m + " m/s";
+            });
+        });
+    }
+
+    // Hent vejret for København med det samme, når siden åbner
+    hentVejr();
   </script>
 
 </body>
