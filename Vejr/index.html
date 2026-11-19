@@ -4,174 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vejret</title>
-  <style>
-    /* ---------- FARVER ----------
-       Farverne skifter efter vejret. JavaScript ændrer dem nederst i filen. */
-    :root {
-      --baggrund: #ff6b35;
-      --blæk: #1b1b1b;
-      --sol: #ffd23f;
-      --sky: #f4f1e8;
-      --dråbe: #1b1b1b;
-    }
 
-    * { box-sizing: border-box; }
+  <!-- Leaflet: et færdigt værktøj (et "bibliotek") til at vise kort -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <!-- TopoJSON: hjælper med at læse landenes omrids -->
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: "Times New Roman", Times, serif;
-      background: var(--baggrund);
-      color: var(--blæk);
-      transition: background 0.8s, color 0.8s;
-      padding: 24px clamp(16px, 5vw, 64px);
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    /* ---------- SØGELINJE ØVERST ---------- */
-    .topbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 12px 24px;
-      border-bottom: 3px solid var(--blæk);
-      padding-bottom: 12px;
-    }
-    .topbar input {
-      flex: 1 1 200px;
-      font: italic 28px "Times New Roman", serif;
-      background: transparent;
-      border: none;
-      color: var(--blæk);
-      outline: none;
-    }
-    .topbar input::placeholder { color: var(--blæk); opacity: 0.5; }
-    .topbar button {
-      font: bold 16px "Times New Roman", serif;
-      text-transform: uppercase;
-      letter-spacing: 0.15em;
-      background: var(--blæk);
-      color: var(--baggrund);
-      border: none;
-      padding: 10px 18px;
-      cursor: pointer;
-      transition: transform 0.15s;
-    }
-    .topbar button:hover { transform: rotate(-3deg) scale(1.05); }
-
-    /* ---------- HISTORIK: de seneste byer ---------- */
-    .historik {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 4px 0;
-      margin-top: -12px;
-      font-size: 18px;
-    }
-    .historik:empty { display: none; }
-    .historik .etiket { margin-right: 12px; }
-    .historik button {
-      font: italic 20px "Times New Roman", serif;
-      background: none;
-      border: none;
-      color: var(--blæk);
-      cursor: pointer;
-      padding: 0;
-      text-decoration: underline;
-      text-underline-offset: 4px;
-    }
-    .historik button:hover { text-decoration-thickness: 3px; }
-    .historik .skilletegn { margin: 0 10px; }
-
-    /* ---------- DET STORE VEJR ---------- */
-    .nu {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: center;
-      gap: 16px;
-    }
-    .by {
-      font-style: italic;
-      font-size: clamp(32px, 6vw, 64px);
-      margin: 0;
-    }
-    .beskrivelse {
-      font-size: clamp(18px, 2.5vw, 26px);
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      margin: 4px 0 0;
-    }
-    .grader {
-      font-weight: bold;
-      font-size: clamp(120px, 26vw, 340px);
-      line-height: 0.85;
-      margin: 8px 0 0;
-      letter-spacing: -0.04em;
-    }
-    .stor-figur {
-      width: clamp(140px, 28vw, 360px);
-      animation: svæv 4s ease-in-out infinite;
-    }
-    @keyframes svæv {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50%      { transform: translateY(-12px) rotate(3deg); }
-    }
-
-    /* ---------- DETALJER: FØLES SOM, VIND, FUGT ---------- */
-    .detaljer {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      border-top: 3px solid var(--blæk);
-      border-bottom: 3px solid var(--blæk);
-    }
-    .detalje { padding: 12px 0; }
-    .detalje + .detalje { border-left: 3px solid var(--blæk); padding-left: 16px; }
-    .etiket {
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      margin: 0;
-    }
-    .værdi {
-      font-weight: bold;
-      font-size: clamp(28px, 5vw, 48px);
-      margin: 0;
-    }
-
-    /* ---------- 5 DAGE ---------- */
-    .dage {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 12px;
-    }
-    .dag {
-      border: 3px solid var(--blæk);
-      padding: 12px 8px;
-      text-align: center;
-      transition: transform 0.2s;
-    }
-    .dag:nth-child(odd):hover  { transform: rotate(-4deg); }
-    .dag:nth-child(even):hover { transform: rotate(4deg); }
-    .dag-navn {
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.15em;
-      margin: 0;
-    }
-    .dag svg { width: 70%; max-width: 90px; }
-    .dag-grader { font-size: 22px; margin: 0; }
-    .dag-grader span { opacity: 0.55; }
-
-    /* På smalle skærme (mobil) stables tingene */
-    @media (max-width: 600px) {
-      .nu { grid-template-columns: 1fr; }
-      .stor-figur { justify-self: center; }
-      .dage { grid-template-columns: repeat(5, minmax(56px, 1fr)); overflow-x: auto; }
-      .dag-grader { font-size: 16px; }
-    }
-  </style>
+  <!-- Vores eget udseende -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -181,258 +22,55 @@
     <button onclick="minPosition()">Hvor er jeg?</button>
   </div>
 
+  <!-- MENU: hvert link peger på en side med # -->
+  <nav class="menu">
+    <a href="#nu"><span>01</span>Nu</a>
+    <a href="#dagens"><span>02</span>Dagens temperatur</a>
+    <a href="#kort"><span>03</span>Kort</a>
+  </nav>
+
   <div class="historik" id="historik"></div>
 
-  <div class="nu">
-    <div>
-      <p class="by" id="bynavn">Henter...</p>
-      <p class="beskrivelse" id="beskrivelse"></p>
-      <p class="grader" id="grader"></p>
+  <!-- ========== SIDE 1: NU ========== -->
+  <section class="side" id="side-nu">
+    <div class="nu">
+      <div>
+        <p class="by" id="bynavn">Henter...</p>
+        <p class="beskrivelse" id="beskrivelse"></p>
+        <p class="grader" id="grader"></p>
+      </div>
+      <div class="stor-figur" id="stor-figur"></div>
     </div>
-    <div class="stor-figur" id="stor-figur"></div>
-  </div>
 
-  <div class="detaljer">
-    <div class="detalje"><p class="etiket">Føles som</p><p class="værdi" id="føles"></p></div>
-    <div class="detalje"><p class="etiket">Vind</p><p class="værdi" id="vind"></p></div>
-    <div class="detalje"><p class="etiket">Fugt</p><p class="værdi" id="fugt"></p></div>
-  </div>
+    <div class="detaljer">
+      <div class="detalje"><p class="etiket">Føles som</p><p class="værdi" id="føles"></p></div>
+      <div class="detalje"><p class="etiket">Vind</p><p class="værdi" id="vind"></p></div>
+      <div class="detalje"><p class="etiket">Fugt</p><p class="værdi" id="fugt"></p></div>
+    </div>
 
-  <div class="dage" id="dage"></div>
+    <div class="dage" id="dage"></div>
+  </section>
 
-  <script>
-    // =========================================================
-    // 1. VEJRTYPE: lav API'ens vejrkode om til en "type"
-    //    API'en giver et tal (f.eks. 61 = regn). Vi bruger "if" til at vælge.
-    // =========================================================
-    function vejrType(kode, erDag) {
-      if (kode === 0)  return erDag ? "sol" : "nat";
-      if (kode <= 2)   return "delvis";
-      if (kode === 3)  return "skyet";
-      if (kode <= 48)  return "tåge";
-      if (kode <= 67)  return "regn";
-      if (kode <= 77)  return "sne";
-      if (kode <= 82)  return "regn";
-      if (kode <= 86)  return "sne";
-      return "torden";
-    }
+  <!-- ========== SIDE 2: DAGENS TEMPERATUR ========== -->
+  <section class="side" id="side-dagens">
+    <div>
+      <p class="by">Dagens temperatur i <span id="graf-by"></span></p>
+      <p class="beskrivelse" id="graf-tekst"></p>
+    </div>
+    <div id="graf"></div>
+  </section>
 
-    // Ord til hver type
-    const beskrivelser = {
-      sol: "Sol fra en skyfri himmel",
-      nat: "Klar nattehimmel",
-      delvis: "Sol og skyer",
-      skyet: "Gråt og overskyet",
-      tåge: "Tåget",
-      regn: "Regn",
-      sne: "Sne",
-      torden: "Torden og lyn"
-    };
+  <!-- ========== SIDE 3: KORT ========== -->
+  <section class="side" id="side-kort">
+    <div>
+      <p class="by">Kortet</p>
+      <p class="beskrivelse">Byerne svæver over landet · klik på en by</p>
+    </div>
+    <div id="kort"></div>
+  </section>
 
-    // Farver til hver type: [baggrund, blæk, sol, sky, dråbe]
-    const farver = {
-      sol:    ["#ff6b35", "#1b1b1b", "#ffd23f", "#f4f1e8", "#1b1b1b"],
-      nat:    ["#1b1f3b", "#f4f1e8", "#ffd23f", "#f4f1e8", "#9ed0ff"],
-      delvis: ["#4ecdc4", "#1b1b1b", "#ffd23f", "#f4f1e8", "#1b1b1b"],
-      skyet:  ["#b8b8d1", "#1b1b1b", "#ffd23f", "#f4f1e8", "#1b1b1b"],
-      tåge:   ["#c9c5ba", "#1b1b1b", "#ffd23f", "#f4f1e8", "#1b1b1b"],
-      regn:   ["#2e5eaa", "#f4f1e8", "#ffd23f", "#f4f1e8", "#9ed0ff"],
-      sne:    ["#dde7f0", "#1b1b1b", "#ffd23f", "#ffffff", "#2e5eaa"],
-      torden: ["#3d1e6d", "#f4f1e8", "#ffd23f", "#b8b8d1", "#ffd23f"]
-    };
-
-    // =========================================================
-    // 2. TEGNINGER: vores egne vejrfigurer (i stedet for emojis)
-    //    SVG = tegning lavet af former: cirkler, firkanter og streger.
-    // =========================================================
-    const sky = `
-      <g style="fill:var(--sky)">
-        <circle cx="38" cy="62" r="16"/>
-        <circle cx="56" cy="50" r="22"/>
-        <circle cx="74" cy="62" r="15"/>
-        <rect x="38" y="60" width="36" height="18"/>
-      </g>`;
-
-    function solstråler(cx, cy, r) {
-      let streger = "";
-      for (let i = 0; i < 8; i++) {           // gentag 8 gange = 8 stråler
-        const vinkel = i * 45;
-        streger += `<rect x="${cx - 3}" y="${cy - r - 16}" width="6" height="12"
-                     transform="rotate(${vinkel} ${cx} ${cy})"/>`;
-      }
-      return `<g style="fill:var(--sol)">
-                <circle cx="${cx}" cy="${cy}" r="${r}"/>${streger}
-              </g>`;
-    }
-
-    function tegning(type) {
-      let indhold = "";
-      if (type === "sol")    indhold = solstråler(50, 50, 22);
-      if (type === "nat")    indhold = `<circle cx="50" cy="50" r="26" style="fill:var(--sky)"/>
-                                        <circle cx="62" cy="42" r="22" style="fill:var(--baggrund)"/>`;
-      if (type === "delvis") indhold = solstråler(36, 38, 16) + sky;
-      if (type === "skyet")  indhold = sky;
-      if (type === "tåge")   indhold = `<g style="fill:var(--sky)">
-                                          <rect x="16" y="34" width="68" height="8"/>
-                                          <rect x="26" y="50" width="58" height="8"/>
-                                          <rect x="16" y="66" width="60" height="8"/></g>`;
-      if (type === "regn")   indhold = sky + `<g style="stroke:var(--dråbe)" stroke-width="5" stroke-linecap="square">
-                                          <line x1="42" y1="84" x2="38" y2="94"/>
-                                          <line x1="56" y1="84" x2="52" y2="94"/>
-                                          <line x1="70" y1="84" x2="66" y2="94"/></g>`;
-      if (type === "sne")    indhold = sky + `<g style="fill:var(--dråbe)">
-                                          <circle cx="42" cy="88" r="4"/>
-                                          <circle cx="56" cy="92" r="4"/>
-                                          <circle cx="70" cy="88" r="4"/></g>`;
-      if (type === "torden") indhold = sky + `<polygon style="fill:var(--dråbe)"
-                                          points="58,70 46,88 55,88 49,100 68,82 59,82 64,70"/>`;
-      return `<svg viewBox="0 0 100 100">${indhold}</svg>`;
-    }
-
-    // =========================================================
-    // 3. SKIFT FARVER efter vejret
-    // =========================================================
-    function skiftFarver(type) {
-      const f = farver[type];
-      const stil = document.documentElement.style;
-      stil.setProperty("--baggrund", f[0]);
-      stil.setProperty("--blæk", f[1]);
-      stil.setProperty("--sol", f[2]);
-      stil.setProperty("--sky", f[3]);
-      stil.setProperty("--dråbe", f[4]);
-    }
-
-    // =========================================================
-    // 4. HENT VEJRET fra API'en og vis det
-    // =========================================================
-    function hentVejr(bredde, længde, navn) {
-      const adresse = "https://api.open-meteo.com/v1/forecast"
-        + "?latitude=" + bredde + "&longitude=" + længde
-        + "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day"
-        + "&daily=weather_code,temperature_2m_max,temperature_2m_min"
-        + "&wind_speed_unit=ms&timezone=auto&forecast_days=6";
-
-      fetch(adresse)
-        .then(svar => svar.json())
-        .then(vejr => {
-          const nu = vejr.current;
-          const type = vejrType(nu.weather_code, nu.is_day === 1);
-
-          skiftFarver(type);
-          document.getElementById("bynavn").textContent = navn;
-          document.getElementById("beskrivelse").textContent = beskrivelser[type];
-          document.getElementById("grader").textContent = Math.round(nu.temperature_2m) + "°";
-          document.getElementById("stor-figur").innerHTML = tegning(type);
-          document.getElementById("føles").textContent = Math.round(nu.apparent_temperature) + "°";
-          document.getElementById("vind").textContent = Math.round(nu.wind_speed_10m) + " m/s";
-          document.getElementById("fugt").textContent = nu.relative_humidity_2m + " %";
-
-          // ---- De næste 5 dage: en LØKKE, der gentager det samme 5 gange ----
-          const dage = vejr.daily;
-          let html = "";
-          for (let i = 1; i <= 5; i++) {
-            const dagNavn = new Date(dage.time[i])
-              .toLocaleDateString("da-DK", { weekday: "short" })
-              .replace(".", "");
-            html += `
-              <div class="dag">
-                <p class="dag-navn">${dagNavn}</p>
-                ${tegning(vejrType(dage.weather_code[i], true))}
-                <p class="dag-grader">${Math.round(dage.temperature_2m_max[i])}°
-                  <span>${Math.round(dage.temperature_2m_min[i])}°</span></p>
-              </div>`;
-          }
-          document.getElementById("dage").innerHTML = html;
-        });
-    }
-
-    // =========================================================
-    // 5. SØG EFTER EN BY (først byens placering, så vejret)
-    // =========================================================
-    function søgBy() {
-      const by = document.getElementById("by").value;
-      const adresse = "https://geocoding-api.open-meteo.com/v1/search?count=1&language=da&name="
-        + encodeURIComponent(by);
-
-      fetch(adresse)
-        .then(svar => svar.json())
-        .then(data => {
-          if (!data.results) {
-            document.getElementById("bynavn").textContent = "Kender ikke " + by;
-            return;
-          }
-          const sted = data.results[0];
-          hentVejr(sted.latitude, sted.longitude, sted.name);
-          gemIHistorik(sted.name);
-        });
-    }
-
-    // =========================================================
-    // 7. HISTORIK: husk de 5 seneste byer
-    //    localStorage = browserens lille "notesbog". Den husker ting,
-    //    selv når du lukker siden (ligesom rekorden i gættespillet).
-    // =========================================================
-    function hentHistorik() {
-      try {
-        return JSON.parse(localStorage.getItem("vejr-historik")) || [];
-      } catch {
-        return [];   // hvis notesbogen er tom eller ikke kan læses
-      }
-    }
-
-    function gemIHistorik(navn) {
-      let liste = hentHistorik();
-      liste = liste.filter(by => by !== navn);   // fjern byen, hvis den allerede er der
-      liste.unshift(navn);                       // sæt den forrest
-      liste = liste.slice(0, 5);                 // behold kun de 5 første
-      try {
-        localStorage.setItem("vejr-historik", JSON.stringify(liste));
-      } catch {}
-      visHistorik();
-    }
-
-    function visHistorik() {
-      const liste = hentHistorik();
-      const boks = document.getElementById("historik");
-      if (liste.length === 0) { boks.innerHTML = ""; return; }
-
-      let html = `<span class="etiket">Senest set</span>`;
-      liste.forEach((by, nummer) => {
-        if (nummer > 0) html += `<span class="skilletegn">/</span>`;
-        html += `<button onclick="vælgBy('${by.replace(/'/g, "\\'")}')">${by}</button>`;
-      });
-      boks.innerHTML = html;
-    }
-
-    // Når man klikker på en by i historikken
-    function vælgBy(by) {
-      document.getElementById("by").value = by;
-      søgBy();
-    }
-
-    visHistorik();
-
-    // =========================================================
-    // 6. HVOR ER JEG? Browseren spørger om lov til at bruge din placering
-    // =========================================================
-    function minPosition() {
-      document.getElementById("bynavn").textContent = "Leder efter dig...";
-      navigator.geolocation.getCurrentPosition(
-        pos => hentVejr(pos.coords.latitude, pos.coords.longitude, "Der hvor du er"),
-        ()  => document.getElementById("bynavn").textContent = "Fik ikke lov til at se, hvor du er"
-      );
-    }
-
-    // Søg med Enter-tasten også
-    document.getElementById("by").addEventListener("keydown", e => {
-      if (e.key === "Enter") søgBy();
-    });
-
-    // Start med den by, du sidst kiggede på (eller København første gang)
-    const sidsteBy = hentHistorik()[0];
-    if (sidsteBy) document.getElementById("by").value = sidsteBy;
-    søgBy();
-  </script>
+  <!-- Vores egen kode (hjernen) -->
+  <script src="app.js"></script>
 
 </body>
 </html>

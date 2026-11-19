@@ -1,0 +1,279 @@
+/* =========================================================
+   STYLE.CSS — alt der handler om UDSEENDET
+   ========================================================= */
+
+/* ---------- FARVER ----------
+   Farverne skifter efter vejret. app.js ændrer dem. */
+:root {
+  --baggrund: #ff6b35;
+  --blæk: #1b1b1b;
+  --sol: #ffd23f;
+  --sky: #f4f1e8;
+  --dråbe: #1b1b1b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Times New Roman", Times, serif;
+  background: var(--baggrund);
+  color: var(--blæk);
+  transition: background 0.8s, color 0.8s;
+  padding: 24px clamp(16px, 5vw, 64px);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ---------- SØGELINJE ØVERST ---------- */
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px 24px;
+  border-bottom: 3px solid var(--blæk);
+  padding-bottom: 12px;
+}
+.topbar input {
+  flex: 1 1 200px;
+  font: italic 28px "Times New Roman", serif;
+  background: transparent;
+  border: none;
+  color: var(--blæk);
+  outline: none;
+}
+.topbar input::placeholder { color: var(--blæk); opacity: 0.5; }
+.topbar button {
+  font: bold 16px "Times New Roman", serif;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  background: var(--blæk);
+  color: var(--baggrund);
+  border: none;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.topbar button:hover { transform: rotate(-3deg) scale(1.05); }
+
+/* ---------- MENU: de tre sider ---------- */
+.menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -8px;
+}
+.menu a {
+  font-weight: bold;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--blæk);
+  text-decoration: none;
+  border: 3px solid var(--blæk);
+  padding: 8px 14px;
+  transition: transform 0.15s;
+}
+.menu a span { font-style: italic; font-weight: normal; margin-right: 8px; }
+.menu a:hover { transform: rotate(-2deg); }
+.menu a.aktiv { background: var(--blæk); color: var(--baggrund); }
+
+/* Kun den aktive side vises */
+.side { display: none; flex-direction: column; gap: 24px; }
+.side.aktiv { display: flex; }
+
+/* ---------- HISTORIK: de seneste byer ---------- */
+.historik {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 0;
+  margin-top: -8px;
+  font-size: 18px;
+}
+.historik:empty { display: none; }
+.historik .etiket { margin-right: 12px; }
+.historik button {
+  font: italic 20px "Times New Roman", serif;
+  background: none;
+  border: none;
+  color: var(--blæk);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.historik button:hover { text-decoration-thickness: 3px; }
+.historik .skilletegn { margin: 0 10px; }
+
+/* ---------- SIDE 1: DET STORE VEJR ---------- */
+.nu {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+}
+.by {
+  font-style: italic;
+  font-size: clamp(32px, 6vw, 64px);
+  margin: 0;
+}
+.beskrivelse {
+  font-size: clamp(18px, 2.5vw, 26px);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin: 4px 0 0;
+}
+.grader {
+  font-weight: bold;
+  font-size: clamp(120px, 26vw, 340px);
+  line-height: 0.85;
+  margin: 8px 0 0;
+  letter-spacing: -0.04em;
+}
+.stor-figur {
+  width: clamp(140px, 28vw, 360px);
+  animation: svæv 4s ease-in-out infinite;
+}
+@keyframes svæv {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-12px) rotate(3deg); }
+}
+
+.detaljer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 3px solid var(--blæk);
+  border-bottom: 3px solid var(--blæk);
+}
+.detalje { padding: 12px 0; }
+.detalje + .detalje { border-left: 3px solid var(--blæk); padding-left: 16px; }
+.etiket {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin: 0;
+}
+.værdi {
+  font-weight: bold;
+  font-size: clamp(28px, 5vw, 48px);
+  margin: 0;
+}
+
+.dage {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.dag {
+  border: 3px solid var(--blæk);
+  padding: 12px 8px;
+  text-align: center;
+  transition: transform 0.2s;
+}
+.dag:nth-child(odd):hover  { transform: rotate(-4deg); }
+.dag:nth-child(even):hover { transform: rotate(4deg); }
+.dag-navn {
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin: 0;
+}
+.dag svg { width: 70%; max-width: 90px; }
+.dag-grader { font-size: 22px; margin: 0; }
+.dag-grader span { opacity: 0.55; }
+
+/* ---------- SIDE 2: GRAFEN ---------- */
+#graf {
+  width: 100%;
+  border-top: 3px solid var(--blæk);
+  padding-top: 8px;
+}
+#graf svg { display: block; width: 100%; font-family: "Times New Roman", Times, serif; }
+
+/* ---------- SIDE 3: KORTET ---------- */
+#kort {
+  height: min(70vh, 640px);
+  border: 3px solid var(--blæk);
+  background: var(--baggrund);
+  transition: background 0.8s;
+}
+/* Landene: flade former med en tyk kant – som et plakat-landkort */
+.land {
+  fill: var(--sky);
+  fill-opacity: 1;
+  stroke: var(--blæk);
+  stroke-width: 2;
+  transition: fill 0.8s;
+}
+#kort .leaflet-control-attribution {
+  font-family: "Times New Roman", serif;
+  background: transparent;
+  color: var(--blæk);
+}
+#kort .leaflet-control-attribution a { color: var(--blæk); }
+#kort .leaflet-bar a {
+  font-family: "Times New Roman", serif;
+  background: var(--blæk);
+  color: var(--baggrund);
+  border-radius: 0;
+}
+
+/* En by, der svæver som en ballon i en snor */
+.ballon-ikon { background: none; border: none; }
+.ballon {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  transform-origin: bottom center;
+  animation: sving 3.5s ease-in-out infinite;
+  cursor: pointer;
+}
+@keyframes sving {
+  0%, 100% { transform: rotate(-4deg); }
+  50%      { transform: rotate(4deg); }
+}
+.ballon svg {
+  width: 52px;
+  height: 52px;
+  /* en tynd sort kant rundt om figuren, så skyen kan ses oven på landet */
+  filter: drop-shadow(1.5px 0 0 var(--blæk)) drop-shadow(-1.5px 0 0 var(--blæk))
+          drop-shadow(0 1.5px 0 var(--blæk)) drop-shadow(0 -1.5px 0 var(--blæk));
+}
+.ballon .mærke {
+  background: var(--blæk);
+  color: var(--baggrund);
+  padding: 2px 10px 4px;
+  text-align: center;
+  line-height: 1;
+  white-space: nowrap;
+}
+.ballon .mærke b { display: block; font-size: 22px; }
+.ballon .mærke i { font-size: 13px; }
+.ballon .snor {
+  width: 2px;
+  flex: 1;
+  min-height: 24px;
+  background: var(--blæk);
+}
+.ballon .prik {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--blæk);
+  margin-bottom: -5px;
+}
+.ballon:hover .mærke { transform: scale(1.1); }
+
+/* ---------- MOBIL: smalle skærme ---------- */
+@media (max-width: 600px) {
+  .nu { grid-template-columns: 1fr; }
+  .stor-figur { justify-self: center; }
+  .dage { grid-template-columns: repeat(5, minmax(56px, 1fr)); overflow-x: auto; }
+  .dag-grader { font-size: 16px; }
+  .menu a { font-size: 13px; padding: 6px 10px; }
+}
