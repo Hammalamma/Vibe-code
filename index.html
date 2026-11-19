@@ -203,6 +203,9 @@
       MAKS_TAL = Number(knap.dataset.maks);
       MAKS_FORSØG = Number(knap.dataset.forsøg);
 
+      // Husk valget til næste gang (i browserens notesbog)
+      try { localStorage.setItem("sidste-niveau", MAKS_TAL); } catch {}
+
       // Gør den valgte knap blå og de andre grå
       niveauKnapper.forEach((k) => k.classList.remove("valgt"));
       knap.classList.add("valgt");
@@ -372,8 +375,12 @@
       if (e.key === "Enter") gemResultat();
     });
 
-    // ---- Her starter programmet: med sværhedsgrad "Mellem" valgt ----
-    vælgNiveau(niveauKnapper[1]);
+    // ---- Her starter programmet ----
+    // Start på den sværhedsgrad, man sidst valgte (eller "Mellem" første gang)
+    let sidsteNiveau = null;
+    try { sidsteNiveau = localStorage.getItem("sidste-niveau"); } catch {}
+    const startKnap = [...niveauKnapper].find(k => k.dataset.maks === sidsteNiveau) || niveauKnapper[1];
+    vælgNiveau(startKnap);
   </script>
 </body>
 </html>
