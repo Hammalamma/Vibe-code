@@ -84,6 +84,20 @@
 
     #tidligere-gæt { color: #777; }
 
+    /* ---- Fælles highscore-liste ---- */
+    #gem-boks {
+      background: #f3f7ff;
+      border-radius: 12px;
+      padding: 12px;
+      margin: 12px 0;
+    }
+    #navn-felt { width: 180px; font-size: 1.1rem; }
+    #top10-boks { border-top: 2px solid #eee; margin-top: 20px; padding-top: 8px; }
+    #top10-boks h2 { font-size: 1.2rem; margin-bottom: 4px; }
+    #top10 { text-align: left; max-width: 260px; margin: 8px auto; padding-left: 28px; }
+    #top10 li { padding: 3px 0; }
+    #top10 li span { float: right; color: #777; }
+
     /* Tommel op: stor, og "popper" frem med en lille animation */
     #tommel {
       font-size: 7rem;
@@ -122,6 +136,19 @@
     <div id="tommel" hidden>👍🏼</div>
     <p id="besked"></p>
     <p id="tidligere-gæt"></p>
+
+    <!-- Vises kun, når man har vundet -->
+    <div id="gem-boks" hidden>
+      <p>Skriv dig på den fælles highscore-liste:</p>
+      <input id="navn-felt" maxlength="20" placeholder="Dit navn">
+      <button id="gem-knap">Gem</button>
+    </div>
+
+    <!-- Den fælles liste, som ALLE spillere kan se -->
+    <div id="top10-boks">
+      <h2>Top 10 – alle spillere</h2>
+      <ol id="top10"></ol>
+    </div>
   </div>
 
   <!-- ===================== JavaScript: hvad siden GØR ===================== -->
@@ -199,8 +226,10 @@
       gætFelt.disabled = false;
       gætKnap.disabled = false;
       igenKnap.hidden = true;
+      gemBoks.hidden = true;
       gætFelt.focus();
       visRekord();
+      hentTop10();
     }
 
     function slutSpil() {
@@ -242,6 +271,10 @@
           visRekord();
         }
         slutSpil();
+        // Vis boksen, hvor man kan skrive sig på den fælles liste
+        gemBoks.hidden = false;
+        gemKnap.disabled = false;
+        navnFelt.focus();
       } else if (tilbage === 0) {
         besked.textContent = `Du tabte! Tallet var ${hemmeligtTal}.`;
         besked.className = "høj";
@@ -265,6 +298,78 @@
     // Lad Enter-tasten virke som et klik på "Gæt!"
     gætFelt.addEventListener("keydown", (e) => {
       if (e.key === "Enter") gæt();
+    });
+
+    // =====================================================================
+    // DATABASEN: den fælles highscore-liste (Supabase)
+    // Det er bare en API – ligesom vejr-appen. Vi HENTER listen og SENDER resultater.
+    // =====================================================================
+    const DATABASE = "https://gpemdxvwswvmqcpqwgha.supabase.co/rest/v1/highscore";
+    const NØGLE = "sb_publishable_vUSTRInfp7i4qqghwwHR2Q_UsGT6zrC";   // offentlig nøgle – må gerne stå her
+
+    const gemBoks = document.getElementById("gem-boks");
+    const navnFelt = document.getElementById("navn-felt");
+    const gemKnap = document.getElementById("gem-knap");
+    const top10 = document.getElementById("top10");
+
+    // HENT: de 10 bedste på den valgte sværhedsgrad (færrest gæt først)
+    function hentTop10() {
+      const adresse = DATABASE
+        + "?select=navn,gaet"
+        + "&niveau=eq." + MAKS_TAL          // kun den valgte sværhedsgrad
+        + "&order=gaet.asc,oprettet.asc"    // færrest gæt først – ved lige stilling vinder den første
+        + "&limit=10";                      // kun 10
+
+      fetch(adresse, { headers: { apikey: NØGLE } })
+        .then(svar => svar.json())
+        .then(liste => {
+          top10.innerHTML = "";
+          if (liste.length === 0) {
+            top10.innerHTML = "<li>Ingen endnu – bliv den første!</li>";
+            return;
+          }
+          liste.forEach(række => {
+            const linje = document.createElement("li");
+            linje.textContent = række.navn;          // textContent = sikkert, selv hvis nogen skriver kode som navn
+            const gæt = document.createElement("span");
+            gæt.textContent = række.gaet + " gæt";
+            linje.appendChild(gæt);
+            top10.appendChild(linje);
+          });
+        })
+        .catch(() => { top10.innerHTML = "<li>Kunne ikke hente listen lige nu</li>"; });
+    }
+
+    // SEND: gem et nyt resultat i databasen
+    function gemResultat() {
+      const navn = navnFelt.value.trim();
+      if (navn === "") { navnFelt.focus(); return; }
+
+      gemKnap.disabled = true;   // så man ikke kan trykke to gange
+      fetch(DATABASE, {
+        method: "POST",                     // POST = "her er noget nyt, gem det"
+        headers: {
+          apikey: NØGLE,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal"
+        },
+        body: JSON.stringify({ navn: navn, gaet: antalForsøg, niveau: MAKS_TAL })
+      })
+        .then(svar => {
+          if (!svar.ok) throw new Error("Databasen sagde nej");
+          gemBoks.hidden = true;
+          besked.textContent += " Du er gemt på listen!";
+          hentTop10();
+        })
+        .catch(() => {
+          gemKnap.disabled = false;
+          alert("Det lykkedes ikke at gemme. Prøv igen.");
+        });
+    }
+
+    gemKnap.addEventListener("click", gemResultat);
+    navnFelt.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") gemResultat();
     });
 
     // ---- Her starter programmet: med sværhedsgrad "Mellem" valgt ----
