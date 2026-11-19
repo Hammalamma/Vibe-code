@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vejret</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #87ceeb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .kort {
+      background: white;
+      padding: 30px 50px;
+      border-radius: 16px;
+      text-align: center;
+    }
+    #temperatur {
+      font-size: 64px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="kort">
+    <h1>☀️ Vejret i København</h1>
+    <p id="temperatur">Henter...</p>
+  </div>
+
+  <script>
+    // 1. Bestillingen: adressen til vejr-API'en (samme som du åbnede i browseren)
+    const adresse = "https://api.open-meteo.com/v1/forecast?latitude=55.68&longitude=12.57&current=temperature_2m";
+
+    // 2. Send bestillingen af sted og vent på svaret
+    fetch(adresse)
+      .then(svar => svar.json())       // 3. Lav svaret om til JSON
+      .then(data => {
+        // 4. Find temperaturen i JSON-dataene
+        const grader = data.current.temperature_2m;
+
+        // 5. Vis den på siden
+        document.getElementById("temperatur").textContent = grader + " °C";
+      });
+  </script>
+
+</body>
+</html>
